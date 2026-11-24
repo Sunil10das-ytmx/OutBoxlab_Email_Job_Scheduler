@@ -4,6 +4,7 @@ import { redis } from "../config/redis.js";
 import { prisma } from "../config/database.js";
 import { sendEmail } from "../services/mail.service.js";
 import { reserveEmailSlot } from "../services/rate-limit.service.js";
+import { enqueueEmailIndexing } from "../services/email-index-outbox.service.js";
 
 
 export const worker = new Worker(
@@ -21,8 +22,14 @@ export const worker = new Worker(
       },
     });
 
-    if (!email) return;                   
-    if (email.status === "sent") return;  
+    if (!email) return;
+    if (
+      email.status === "sent" ||
+      email.status === "cancelled" ||
+      email.status === "unknown"
+    ) {
+      return;
+    }  
 
     const senderId    = email.campaign?.senderId ?? "";
     const hourlyLimit = email.campaign?.hourlyLimit
@@ -38,9 +45,12 @@ export const worker = new Worker(
 
     
     if (!decision.allowed || decision.runAt > Date.now()) {
-      await prisma.scheduledEmail.update({
-        where: { id: emailId },
-        data: { status: "queued" },
+      await prisma.$transaction(async (tx) => {
+        await tx.scheduledEmail.update({
+          where: { id: emailId },
+          data: { status: "queued" },
+        });
+        await enqueueEmailIndexing(tx, [emailId]);
       });
 
       if (!decision.allowed) {
@@ -60,15 +70,22 @@ export const worker = new Worker(
       throw new DelayedError();
     }
 
-    const claimed = await prisma.scheduledEmail.updateMany({
-      where: {
-        id: emailId,
-        status: { in: ["pending", "queued"] },
-      },
-      data: {
-        status: "sending",
-        attempts: { increment: 1 },
-      },
+    const claimed = await prisma.$transaction(async (tx) => {
+      const updated = await tx.scheduledEmail.updateMany({
+        where: {
+          id: emailId,
+          status: { in: ["pending", "queued"] },
+        },
+        data: {
+          status: "sending",
+          sendingStartedAt: new Date(),
+          attempts: { increment: 1 },
+        },
+      });
+      if (updated.count > 0) {
+        await enqueueEmailIndexing(tx, [emailId]);
+      }
+      return updated;
     });
 
     if (claimed.count === 0) {
@@ -78,14 +95,17 @@ export const worker = new Worker(
     try {
       const result = await sendEmail(email);
 
-      await prisma.scheduledEmail.update({
-        where: { id: emailId },
-        data: {
-          status: "sent",
-          sentAt: new Date(),
-          messageId: result.messageId,
-          previewUrl: result.previewUrl,
-        } as any,
+      await prisma.$transaction(async (tx) => {
+        await tx.scheduledEmail.update({
+          where: { id: emailId },
+          data: {
+            status: "sent",
+            sentAt: new Date(),
+            messageId: result.messageId,
+            previewUrl: result.previewUrl,
+          } as any,
+        });
+        await enqueueEmailIndexing(tx, [emailId]);
       });
 
       console.log(
@@ -94,15 +114,21 @@ export const worker = new Worker(
 
       return result;
     } catch (error: any) {
-      await prisma.scheduledEmail.update({
-        where: { id: emailId },
-        data: {
-          status: "failed",
-          errorMessage: error.message || String(error),
-        },
+      const maxAttempts = job.opts.attempts ?? 5;
+      const currentAttempt = job.attemptsMade + 1;
+      const isFinalAttempt = currentAttempt >= maxAttempts;
+
+      await prisma.$transaction(async (tx) => {
+        await tx.scheduledEmail.update({
+          where: { id: emailId },
+          data: {
+            status: isFinalAttempt ? "failed" : "queued",
+            errorMessage: error.message || String(error),
+          },
+        });
+        await enqueueEmailIndexing(tx, [emailId]);
       });
 
-  
       throw error;
     }
   },
@@ -136,5 +162,15 @@ worker.on("error", (err) => {  if (process.env.NODE_ENV !== "development") {
     console.error("[Worker] Error:", err);
   }
 });
+
+const shutdownWorker = async (signal: string) => {
+  console.log(`[Worker] Received ${signal}. Closing worker gracefully...`);
+  await worker.close();
+  await Promise.allSettled([prisma.$disconnect(), redis.quit()]);
+  process.exit(0);
+};
+
+process.on("SIGINT", () => void shutdownWorker("SIGINT"));
+process.on("SIGTERM", () => void shutdownWorker("SIGTERM"));
 
 export default worker;

@@ -64,8 +64,9 @@ model ScheduledEmail {
   subject        String?
   body           String?
   sequenceNo     Int
-  scheduledAt    DateTime
-  sentAt         DateTime?
+  scheduledAt      DateTime
+  sendingStartedAt DateTime?
+  sentAt           DateTime?
   status         String    @default("pending")
   attempts       Int       @default(0)
   errorMessage   String?
@@ -84,15 +85,13 @@ model ScheduledEmail {
 
 model SlackConnection {
   id                String   @id @default(uuid())
-  userId            String
+  userId            String   @unique
   slackTeamId       String
   botTokenEncrypted String
   channelId         String
   connectedAt       DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, slackTeamId, channelId])
 }
 
 model RateLimitEvent {
@@ -119,4 +118,19 @@ model OutboxEvent {
   createdAt    DateTime  @default(now())
 
   @@index([status, createdAt])
+}
+
+model EmailIndexOutbox {
+  id            String    @id @default(uuid())
+  emailId       String
+  status        String    @default("PENDING")
+  attempts      Int       @default(0)
+  errorMessage  String?
+  nextAttemptAt DateTime  @default(now())
+  lockedAt      DateTime?
+  processedAt   DateTime?
+  createdAt     DateTime  @default(now())
+
+  @@index([status, nextAttemptAt, createdAt])
+  @@index([emailId])
 }

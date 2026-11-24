@@ -3,21 +3,39 @@ import { z } from "zod";
 import { prisma } from "../../config/database.js";
 import { calculateEmailSchedules } from "../../services/delay.service.js";
 import { triggerOutboxDispatcher } from "../../services/outbox-dispatcher.service.js";
+import { enqueueEmailIndexing } from "../../services/email-index-outbox.service.js";
+import {
+  MAX_RECIPIENTS_PER_CAMPAIGN,
+  parseAndValidateRecipientCsv,
+} from "../../services/csv.service.js";
 
-export const scheduleRequestSchema = z.object({
-  senderId: z.string({ error: "senderId is required" }).min(1),
-  subject: z.string({ error: "subject is required" }).min(1, "Subject cannot be empty"),
-  body: z.string({ error: "body is required" }).min(1, "Body cannot be empty"),
-  recipients: z
-    .array(z.string().email("Invalid recipient email format"))
-    .min(1, "At least one recipient email is required"),
-  startTime: z.string({ error: "startTime ISO-8601 string is required" }).refine(
-    (val) => !isNaN(Date.parse(val)),
-    "startTime must be a valid ISO-8601 timestamp with timezone"
-  ),
-  delayBetweenEmails: z.number().int().min(0).default(2000),
-  hourlyLimit: z.number().int().min(1).default(100),
-});
+export const scheduleRequestSchema = z
+  .object({
+    senderId: z.string({ error: "senderId is required" }).min(1),
+    subject: z.string({ error: "subject is required" }).min(1, "Subject cannot be empty"),
+    body: z.string({ error: "body is required" }).min(1, "Body cannot be empty"),
+    recipients: z
+      .array(z.string().email("Invalid recipient email format"))
+      .max(
+        MAX_RECIPIENTS_PER_CAMPAIGN,
+        `Maximum ${MAX_RECIPIENTS_PER_CAMPAIGN} recipients allowed per campaign`
+      )
+      .optional(),
+    csv: z.string().min(1).optional(),
+    startTime: z.string({ error: "startTime ISO-8601 string is required" }).refine(
+      (val) => !isNaN(Date.parse(val)),
+      "startTime must be a valid ISO-8601 timestamp with timezone"
+    ),
+    delayBetweenEmails: z.coerce.number().int().min(0).default(2000),
+    hourlyLimit: z.coerce.number().int().min(1).default(100),
+  })
+  .refine(
+    (data) => (data.recipients && data.recipients.length > 0) || Boolean(data.csv),
+    {
+      message: "At least one recipient email or a CSV file is required",
+      path: ["recipients"],
+    }
+  );
 
 export type ScheduleEmailInput = z.infer<typeof scheduleRequestSchema>;
 
@@ -47,10 +65,34 @@ export async function scheduleEmailCampaign(
     subject,
     body,
     recipients,
+    csv,
     startTime,
     delayBetweenEmails,
     hourlyLimit,
   } = validated;
+
+  let uniqueRecipients: string[];
+  if (csv) {
+    const parsedCsv = parseAndValidateRecipientCsv(csv);
+    if (parsedCsv.recipients.length === 0) {
+      const error = new Error("CSV contains no valid recipient emails");
+      (error as any).statusCode = 400;
+      throw error;
+    }
+    uniqueRecipients = parsedCsv.recipients;
+  } else {
+    uniqueRecipients = Array.from(
+      new Set((recipients ?? []).map((r) => r.trim().toLowerCase()))
+    );
+  }
+
+  if (uniqueRecipients.length > MAX_RECIPIENTS_PER_CAMPAIGN) {
+    const error = new Error(
+      `Recipient limit exceeded. Maximum ${MAX_RECIPIENTS_PER_CAMPAIGN} unique recipients allowed.`
+    );
+    (error as any).statusCode = 400;
+    throw error;
+  }
 
   const sender = await prisma.emailSender.findFirst({
     where: {
@@ -78,10 +120,6 @@ export async function scheduleEmailCampaign(
     (error as any).statusCode = 400;
     throw error;
   }
-
-  const uniqueRecipients = Array.from(
-    new Set(recipients.map((r) => r.trim().toLowerCase()))
-  );
 
   const scheduledItems = calculateEmailSchedules(
     uniqueRecipients,
@@ -122,6 +160,11 @@ export async function scheduleEmailCampaign(
     await tx.scheduledEmail.createMany({
       data: emailRows,
     });
+
+    await enqueueEmailIndexing(
+      tx,
+      emailRows.map((email) => email.id)
+    );
 
     const outboxRows = emailRows.map((email) => ({
       id: crypto.randomUUID(),

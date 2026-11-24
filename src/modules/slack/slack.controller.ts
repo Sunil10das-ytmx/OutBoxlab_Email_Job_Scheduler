@@ -64,7 +64,7 @@ export async function slackCallback(req: Request, res: Response): Promise<void> 
     const { teamId, channelId } = await exchangeSlackCode(code, userId);
 
     const frontendUrl = process.env.FRONTEND_URL ?? "http://localhost:5173";
-    res.redirect(`${frontendUrl}/dashboard?slack=connected&team=${teamId}&channel=${channelId}`);
+    res.redirect(`${frontendUrl}/slack?slack=connected&team=${teamId}&channel=${channelId}`);
   } catch (err: any) {
     console.error("[Slack callback] token exchange failed:", err.message);
     res.status(500).json({ error: "Failed to connect Slack. Please try again." });

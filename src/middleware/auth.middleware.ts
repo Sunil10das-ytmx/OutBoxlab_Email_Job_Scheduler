@@ -1,10 +1,12 @@
 import type { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { prisma } from "../config/database.js";
+import { redis } from "../config/redis.js";
 
 interface JwtPayload {
   userId: string;
   email: string;
+  exp?: number;
 }
 
 declare global {
@@ -45,6 +47,15 @@ export async function authenticate(
   }
 
   try {
+    try {
+      const isBlacklisted = await redis.get(`auth:blacklist:${token}`);
+      if (isBlacklisted) {
+        res.status(401).json({ error: "Session has been logged out" });
+        return;
+      }
+    } catch {
+    }
+
     const jwtSecret = process.env.JWT_SECRET || "default_jwt_secret";
     const decoded = jwt.verify(token, jwtSecret) as JwtPayload;
 

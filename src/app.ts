@@ -3,6 +3,10 @@ import cors from "cors";
 import authRouter from "./modules/auth/auth.routes.js";
 import emailRouter from "./modules/emails/email.routes.js";
 import slackRouter from "./modules/slack/slack.routes.js";
+import campaignRouter from "./modules/campaigns/campaign.routes.js";
+import senderRouter from "./modules/senders/sender.routes.js";
+import { bullBoardRouter } from "./config/bull-board.js";
+import { adminAuthMiddleware } from "./middleware/admin.middleware.js";
 
 const app = express();
 
@@ -24,5 +28,12 @@ app.use("/auth", authRouter);
 
 app.use("/api/emails", emailRouter);
 app.use("/emails", emailRouter); 
+
+app.use("/api/campaigns", campaignRouter);
+app.use("/api/senders", senderRouter);
+
+app.use("/api/integrations/slack", slackRouter);
+
+app.use("/admin/queues", adminAuthMiddleware, bullBoardRouter);
 
 export default app;

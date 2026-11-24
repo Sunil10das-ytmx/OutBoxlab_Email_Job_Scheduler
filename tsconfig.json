@@ -10,6 +10,7 @@
     "module": "nodenext",
     "target": "esnext",
     "types": ["node"],
+    "typeRoots": ["./node_modules/@types", "./node_modules/.prisma"],
     // Other Outputs
     "sourceMap": true,
     "declaration": true,

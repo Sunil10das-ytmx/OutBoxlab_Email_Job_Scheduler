@@ -2,8 +2,20 @@ import "dotenv/config";
 import app from "./app.js";
 import { prisma } from "./config/database.js";
 import { redis } from "./config/redis.js";
-import { recoverPendingJobs } from "./services/recovery.service.js";
-import { startOutboxDispatcher } from "./services/outbox-dispatcher.service.js";
+import {
+  recoverPendingJobs,
+  startStaleSendingMonitor,
+  stopStaleSendingMonitor,
+} from "./services/recovery.service.js";
+import {
+  startOutboxDispatcher,
+  stopOutboxDispatcher,
+} from "./services/outbox-dispatcher.service.js";
+import {
+  startEmailIndexOutboxDispatcher,
+  stopEmailIndexOutboxDispatcher,
+} from "./services/email-index-outbox.service.js";
+import { emailQueue } from "./queue/email.queue.js";
 
 async function pingWithTimeout(promise: Promise<any>, timeoutMs: number) {
   let timer: NodeJS.Timeout;
@@ -29,15 +41,38 @@ async function startServer() {
   }
 
   await recoverPendingJobs();
+  startStaleSendingMonitor(60_000);
 
   startOutboxDispatcher(3000);
   console.log("Outbox background dispatcher started");
 
+  startEmailIndexOutboxDispatcher();
+  console.log("Email search indexing dispatcher started");
+
   const port = Number(process.env.PORT || 5000);
 
-  app.listen(port, () => {
+  const server = app.listen(port, () => {
     console.log(`Server running on port ${port}`);
   });
+
+  const shutdown = async (signal: string) => {
+    console.log(`[Server] Received ${signal}. Shutting down gracefully...`);
+    stopOutboxDispatcher();
+    stopEmailIndexOutboxDispatcher();
+    stopStaleSendingMonitor();
+
+    server.close(async () => {
+      await Promise.allSettled([
+        emailQueue.close(),
+        prisma.$disconnect(),
+        redis.quit(),
+      ]);
+      process.exit(0);
+    });
+  };
+
+  process.on("SIGINT", () => void shutdown("SIGINT"));
+  process.on("SIGTERM", () => void shutdown("SIGTERM"));
 }
 
 startServer().catch((error) => {

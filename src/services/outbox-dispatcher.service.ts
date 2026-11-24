@@ -1,5 +1,6 @@
 import { prisma } from "../config/database.js";
 import { addScheduledEmailsBulk } from "../queue/email.queue.js";
+import { enqueueEmailIndexing } from "./email-index-outbox.service.js";
 
 let isDispatching = false;
 let dispatcherInterval: NodeJS.Timeout | null = null;
@@ -41,9 +42,14 @@ export async function dispatchPendingOutboxEvents(): Promise<number> {
       },
     });
 
-    await prisma.scheduledEmail.updateMany({
-      where: { id: { in: emailIds } },
-      data: { status: "queued" },
+    await prisma.$transaction(async (tx) => {
+      const updated = await tx.scheduledEmail.updateMany({
+        where: { id: { in: emailIds }, status: "pending" },
+        data: { status: "queued" },
+      });
+      if (updated.count > 0) {
+        await enqueueEmailIndexing(tx, emailIds);
+      }
     });
 
     return pendingEvents.length;

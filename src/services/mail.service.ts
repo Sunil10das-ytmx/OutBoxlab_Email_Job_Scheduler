@@ -18,6 +18,10 @@ export interface SendEmailResult {
 
 const transporterCache = new Map<string, Transporter>();
 
+export function invalidateSenderTransporter(senderId: string): void {
+  transporterCache.delete(senderId);
+}
+
 
 export async function getTransporterForSender(sender?: {
   id: string;

@@ -1,12 +1,50 @@
 import type { Request, Response } from "express";
+import { ZodError } from "zod";
 import { prisma } from "../../config/database.js";
+import { scheduleEmailCampaign } from "./email.service.js";
 
-
-export async function getScheduledEmails(req: Request, res: Response): Promise<void> {
+export async function scheduleEmailHandler(
+  req: Request,
+  res: Response
+): Promise<void> {
   try {
     const userId = req.user!.id;
-    const campaignId = typeof req.query.campaignId === "string" ? req.query.campaignId : undefined;
-    const status = typeof req.query.status === "string" ? req.query.status : undefined;
+    const result = await scheduleEmailCampaign(userId, req.body);
+
+    res.status(201).json({
+      success: true,
+      message: "Campaign and emails scheduled successfully",
+      data: result,
+    });
+  } catch (error: any) {
+    if (error instanceof ZodError) {
+      res.status(400).json({
+        error: "Validation failed",
+        details: error.issues.map((issue) => ({
+          field: issue.path.join("."),
+          message: issue.message,
+        })),
+      });
+      return;
+    }
+
+    const statusCode = error.statusCode || 500;
+    res.status(statusCode).json({
+      error: error.message || "Failed to schedule emails",
+    });
+  }
+}
+
+export async function getScheduledEmails(
+  req: Request,
+  res: Response
+): Promise<void> {
+  try {
+    const userId = req.user!.id;
+    const campaignId =
+      typeof req.query.campaignId === "string" ? req.query.campaignId : undefined;
+    const status =
+      typeof req.query.status === "string" ? req.query.status : undefined;
 
     const emails = await prisma.scheduledEmail.findMany({
       where: {
@@ -27,7 +65,10 @@ export async function getScheduledEmails(req: Request, res: Response): Promise<v
 }
 
 
-export async function getEmailById(req: Request, res: Response): Promise<void> {
+export async function getEmailById(
+  req: Request,
+  res: Response
+): Promise<void> {
   try {
     const id = req.params["id"];
     if (!id || typeof id !== "string") {

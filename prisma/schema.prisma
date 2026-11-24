@@ -104,3 +104,17 @@ model RateLimitEvent {
 
   @@index([senderId, windowStart])
 }
+
+model OutboxEvent {
+  id           String    @id @default(uuid())
+  emailId      String
+  campaignId   String
+  payload      String    @db.Text
+  status       String    @default("PENDING")
+  attempts     Int       @default(0)
+  errorMessage String?
+  publishedAt  DateTime?
+  createdAt    DateTime  @default(now())
+
+  @@index([status, createdAt])
+}

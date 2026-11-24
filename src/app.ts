@@ -1,5 +1,19 @@
 import express from "express";
+import cors from "cors";
 
-export const app = express();
+const app = express();
 
-app.use(express.json());
+app.use(
+  cors({
+    origin: process.env.FRONTEND_URL,
+    credentials: true,
+  })
+);
+
+app.use(express.json({ limit: "2mb" }));
+
+app.get("/health", (req, res) => {
+  res.json({ status: "Backend running successfully" });
+});
+
+export default app;

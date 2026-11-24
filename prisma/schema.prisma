@@ -5,3 +5,102 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+model User {
+  id        String   @id @default(uuid())
+  googleId  String   @unique
+  name      String
+  email     String   @unique
+  avatar    String?
+
+  campaigns        Campaign[]
+  senders          EmailSender[]
+  slackConnections SlackConnection[]
+
+  createdAt DateTime @default(now())
+}
+
+model EmailSender {
+  id                    String   @id @default(uuid())
+  userId                String
+  senderName            String
+  senderEmail           String
+  smtpHost              String
+  smtpPort              Int
+  smtpUsername          String
+  smtpPasswordEncrypted String
+  isActive              Boolean  @default(true)
+
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  campaigns       Campaign[]
+  rateLimitEvents RateLimitEvent[]
+
+  createdAt DateTime @default(now())
+}
+
+model Campaign {
+  id          String   @id @default(uuid())
+  userId      String
+  senderId    String?
+  subject     String
+  body        String
+  startTime   DateTime
+  delayMs     Int      @default(0)
+  hourlyLimit Int      @default(50)
+  totalEmails Int      @default(0)
+  status      String   @default("scheduled")
+
+  user   User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sender EmailSender?     @relation(fields: [senderId], references: [id], onDelete: SetNull)
+  emails ScheduledEmail[]
+
+  createdAt DateTime @default(now())
+}
+
+model ScheduledEmail {
+  id             String    @id @default(uuid())
+  campaignId     String
+  recipientEmail String
+  subject        String?
+  body           String?
+  sequenceNo     Int
+  scheduledAt    DateTime
+  sentAt         DateTime?
+  status         String    @default("pending")
+  attempts       Int       @default(0)
+  errorMessage   String?
+
+  campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([campaignId, recipientEmail], map: "idx_campaign_recipient")
+  @@index([status, scheduledAt], map: "idx_email_status_time")
+  @@index([campaignId, sequenceNo], map: "idx_email_campaign")
+  @@index([campaignId, status])
+}
+
+model SlackConnection {
+  id                String   @id @default(uuid())
+  userId            String
+  slackTeamId       String
+  botTokenEncrypted String
+  channelId         String
+  connectedAt       DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, slackTeamId, channelId])
+}
+
+model RateLimitEvent {
+  id               String   @id @default(uuid())
+  senderId         String
+  windowStart      DateTime
+  notificationSent Boolean  @default(false)
+  createdAt        DateTime @default(now())
+
+  sender EmailSender @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([senderId, windowStart])
+}

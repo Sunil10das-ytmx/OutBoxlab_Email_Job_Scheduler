@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import authRouter from "./modules/auth/auth.routes.js";
 import emailRouter from "./modules/emails/email.routes.js";
+import slackRouter from "./modules/slack/slack.routes.js";
 
 const app = express();
 

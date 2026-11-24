@@ -69,6 +69,8 @@ model ScheduledEmail {
   status         String    @default("pending")
   attempts       Int       @default(0)
   errorMessage   String?
+  messageId      String?
+  previewUrl     String?
 
   campaign Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
 

@@ -1,41 +1,39 @@
 import { Queue } from "bullmq";
-import "dotenv/config";
+import { redis } from "../config/redis.js";
 
-export interface EmailJobPayload {
+export interface EmailJobData {
   emailId: string;
-  campaignId: string;
-  recipientEmail: string;
-  subject: string;
-  body: string;
-  scheduledAt: string;
 }
 
-export const EMAIL_QUEUE_NAME = "email-queue";
-
-export const emailQueue = new Queue<EmailJobPayload>(EMAIL_QUEUE_NAME, {
-  connection: {
-    host: process.env.REDIS_HOST || "localhost",
-    port: Number(process.env.REDIS_PORT || 6379),
-  },
-  defaultJobOptions: {
-    attempts: 3,
-    backoff: {
-      type: "exponential",
-      delay: 5000,
-    },
-    removeOnComplete: {
-      age: 24 * 3600, // keep 24 hours
-      count: 2000,
-    },
-    removeOnFail: {
-      age: 7 * 24 * 3600, // keep 7 days
-    },
-  },
+export const emailQueue = new Queue<EmailJobData>("email-queue", {
+  connection: redis,
 });
 
-emailQueue.on("error", (err) => {
-  // Gracefully handle Redis connection drops in background
-  if (process.env.NODE_ENV === "development") {
-    // console.debug("[BullMQ Queue Error]", err.message);
-  }
-});
+
+export async function addScheduledEmailsBulk(
+  emails: Array<{ id: string; scheduledAt: Date }>
+) {
+  if (emails.length === 0) return [];
+
+  const now = Date.now();
+
+  const jobs = emails.map((email) => ({
+    name: "send-email",
+    data: {
+      emailId: email.id,
+    },
+    opts: {
+      jobId: `email-${email.id}`,
+      delay: Math.max(0, email.scheduledAt.getTime() - now),
+      attempts: 5,
+      backoff: {
+        type: "exponential",
+        delay: 5000,
+      },
+      removeOnComplete: 1000,
+      removeOnFail: false,
+    },
+  }));
+
+  return await emailQueue.addBulk(jobs);
+}

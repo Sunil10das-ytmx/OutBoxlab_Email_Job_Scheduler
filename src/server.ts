@@ -2,6 +2,7 @@ import "dotenv/config";
 import app from "./app.js";
 import { prisma } from "./config/database.js";
 import { redis } from "./config/redis.js";
+import { recoverPendingJobs } from "./services/recovery.service.js";
 import { startOutboxDispatcher } from "./services/outbox-dispatcher.service.js";
 
 async function pingWithTimeout(promise: Promise<any>, timeoutMs: number) {
@@ -27,7 +28,8 @@ async function startServer() {
     console.warn("Redis connection warning:", error.message);
   }
 
-  // Start continuous Outbox Dispatcher (checks on startup and continuously in background)
+  await recoverPendingJobs();
+
   startOutboxDispatcher(3000);
   console.log("Outbox background dispatcher started");
 

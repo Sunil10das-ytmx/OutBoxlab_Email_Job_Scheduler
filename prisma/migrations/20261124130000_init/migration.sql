@@ -55,6 +55,8 @@ CREATE TABLE "ScheduledEmail" (
     "status" TEXT NOT NULL DEFAULT 'pending',
     "attempts" INTEGER NOT NULL DEFAULT 0,
     "errorMessage" TEXT,
+    "messageId" TEXT,
+    "previewUrl" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "ScheduledEmail_pkey" PRIMARY KEY ("id")

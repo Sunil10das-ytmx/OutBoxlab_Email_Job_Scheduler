@@ -35,7 +35,7 @@ export default function AddSenderModal({
         senderEmail: "auto-generated@ethereal.email",
         useEthereal: true,
       });
-      const created = (res.data as unknown as { sender: Sender }).sender ?? res.data;
+      const created = res.data.sender;
       toast.success("Sender added successfully");
       onSenderAdded(created);
       onClose();
@@ -67,7 +67,7 @@ export default function AddSenderModal({
         smtpPassword: smtpPassword.trim(),
         useEthereal: false,
       });
-      const created = (res.data as unknown as { sender: Sender }).sender ?? res.data;
+      const created = res.data.sender;
       toast.success("Sender added successfully");
       onSenderAdded(created);
       onClose();

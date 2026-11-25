@@ -1,4 +1,4 @@
-# ReachInbox / OutBoxLab — Distributed Email Job Scheduler & Cold Outreach Platform
+# MailBoxLab — Distributed Email Job Scheduler & Cold Outreach Platform
 
 A production-grade, distributed cold email outreach and scheduling platform built with **Node.js, Express, TypeScript, Redis, BullMQ, PostgreSQL (Prisma), Elasticsearch, and React (Vite, Tailwind CSS)**.
 

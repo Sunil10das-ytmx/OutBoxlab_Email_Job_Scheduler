@@ -1,4 +1,4 @@
-# ReachInbox / OutBoxLab - Email Scheduler
+# MailBox - Email Scheduler
 
 A production-grade email scheduling platform built with **Node.js**, **TypeScript**, **Express**, **Prisma (PostgreSQL)**, **BullMQ + Redis**, **Elasticsearch**, **Ethereal SMTP**, **Google OAuth**, and **Slack OAuth**.
 

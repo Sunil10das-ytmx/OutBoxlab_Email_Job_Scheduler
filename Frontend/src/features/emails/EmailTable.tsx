@@ -110,20 +110,20 @@ export default function EmailTable({
 
   if (emails.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-16 text-center space-y-2">
-        <div className="w-12 h-12 rounded-full bg-gray-50 flex items-center justify-center text-gray-600 mb-1 border border-gray-100">
+      <div className="flex flex-col items-center justify-center py-20 text-center space-y-2">
+        <div className="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center text-slate-600 mb-1 border border-slate-100">
           {mode === "scheduled" ? (
-            <CalendarClock size={26} className="text-gray-600" />
+            <CalendarClock size={24} className="text-slate-600" />
           ) : (
-            <Mail size={26} className="text-gray-600" />
+            <Mail size={24} className="text-slate-600" />
           )}
         </div>
-        <p className="text-base font-semibold text-gray-900">
+        <p className="text-base font-semibold text-slate-900">
           {mode === "scheduled"
             ? "No scheduled emails yet"
             : "No sent emails yet"}
         </p>
-        <p className="text-sm text-gray-500 max-w-sm">
+        <p className="text-sm text-slate-500 max-w-sm">
           {mode === "scheduled"
             ? "Your scheduled emails will appear here."
             : "Your sent emails will appear here."}
@@ -133,7 +133,7 @@ export default function EmailTable({
             <button
               type="button"
               onClick={onCompose}
-              className="px-6 py-2.5 rounded-full bg-gray-900 hover:bg-gray-800 text-white text-xs font-semibold shadow-sm transition cursor-pointer"
+              className="px-6 py-2.5 rounded-full bg-[#0F172A] hover:bg-slate-800 text-white text-sm font-medium shadow-sm transition cursor-pointer"
             >
               Compose New Email
             </button>

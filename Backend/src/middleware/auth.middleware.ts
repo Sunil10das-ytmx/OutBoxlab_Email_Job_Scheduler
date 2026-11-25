@@ -58,22 +58,40 @@ export async function authenticate(
         return;
       }
     } catch {
+      // Redis unavailable; continue token verification
     }
 
     const jwtSecret = process.env.JWT_SECRET || "default_jwt_secret";
-    const decoded = jwt.verify(token, jwtSecret) as JwtPayload;
+    let decoded: JwtPayload;
+    try {
+      decoded = jwt.verify(token, jwtSecret) as JwtPayload;
+    } catch (jwtError) {
+      res.status(401).json({
+        error: "Invalid or expired authentication token",
+      });
+      return;
+    }
 
-    const user = await prisma.user.findUnique({
-      where: { id: decoded.userId },
-      select: {
-        id: true,
-        googleId: true,
-        name: true,
-        email: true,
-        avatar: true,
-        createdAt: true,
-      },
-    });
+    let user;
+    try {
+      user = await prisma.user.findUnique({
+        where: { id: decoded.userId },
+        select: {
+          id: true,
+          googleId: true,
+          name: true,
+          email: true,
+          avatar: true,
+          createdAt: true,
+        },
+      });
+    } catch (dbError: any) {
+      console.error("[Auth] Database error verifying user:", dbError.message);
+      res.status(503).json({
+        error: "Database temporarily unavailable, please retry",
+      });
+      return;
+    }
 
     if (!user) {
       res.status(401).json({ error: "User associated with token no longer exists" });
@@ -83,8 +101,8 @@ export async function authenticate(
     req.user = user;
     next();
   } catch (error: any) {
-    res.status(401).json({
-      error: "Invalid or expired authentication token",
+    res.status(500).json({
+      error: "Internal authentication error",
     });
   }
 }

@@ -18,30 +18,57 @@ export interface AuthContextType {
 export const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<User | null>(() => {
+    const saved = localStorage.getItem("user");
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  });
   const [token, setToken] = useState<string | null>(
     localStorage.getItem("token")
   );
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState<boolean>(() => {
+    // Only show session checking if there is a token but no persisted user
+    return !!localStorage.getItem("token") && !localStorage.getItem("user");
+  });
 
   useEffect(() => {
+    const storedToken = localStorage.getItem("token");
+    if (!storedToken) {
+      setLoading(false);
+      return;
+    }
+
     authService
       .me()
       .then((res) => {
         setUser(res.data.user);
+        localStorage.setItem("user", JSON.stringify(res.data.user));
       })
-      .catch(() => {
-        localStorage.removeItem("token");
-        setToken(null);
-        setUser(null);
+      .catch((err: any) => {
+        // ONLY log out if backend explicitly rejected credentials with 401
+        // Do NOT log out on 503 (database busy) or network error / timeout
+        if (err.response?.status === 401) {
+          localStorage.removeItem("token");
+          localStorage.removeItem("user");
+          setToken(null);
+          setUser(null);
+        }
       })
       .finally(() => setLoading(false));
-  }, [token]);
+  }, []);
 
   const login = (newToken: string, newUser: User) => {
     localStorage.setItem("token", newToken);
+    localStorage.setItem("user", JSON.stringify(newUser));
     setToken(newToken);
     setUser(newUser);
+    setLoading(false);
   };
 
   const logout = async () => {
@@ -50,6 +77,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch {
     } finally {
       localStorage.removeItem("token");
+      localStorage.removeItem("user");
       setToken(null);
       setUser(null);
       if (window.location.pathname !== "/login") {

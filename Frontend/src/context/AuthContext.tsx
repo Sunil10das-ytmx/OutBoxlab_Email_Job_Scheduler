@@ -24,10 +24,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
   const [loading, setLoading] = useState(true);
 
+  /* Verify session on mount with /api/auth/me */
   useEffect(() => {
     authService
       .me()
-      .then((res) => setUser(res.data.user))
+      .then((res) => {
+        setUser(res.data.user);
+      })
       .catch(() => {
         localStorage.removeItem("token");
         setToken(null);
@@ -44,12 +47,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = async () => {
     try {
+      /* Invalidate session on backend (clears httpOnly cookie + blacklists token in Redis) */
       await authService.logout();
     } catch {
+      // Continue even if network error occurs during logout
+    } finally {
+      localStorage.removeItem("token");
+      setToken(null);
+      setUser(null);
+      if (window.location.pathname !== "/login") {
+        window.location.href = "/login";
+      }
     }
-    localStorage.removeItem("token");
-    setToken(null);
-    setUser(null);
   };
 
   return (

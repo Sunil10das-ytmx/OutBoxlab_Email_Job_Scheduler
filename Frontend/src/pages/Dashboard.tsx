@@ -1,6 +1,6 @@
 import { useState } from "react";
 import toast from "react-hot-toast";
-import { MessageSquare, Plus, Search } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 import Header from "../components/Header";
 import Sidebar, { type SidebarSection } from "../components/Sidebar";
 import Modal from "../components/Modal";
@@ -128,17 +128,6 @@ export default function Dashboard({
               <p className="text-sm text-slate-500 mt-0.5">Manage your email campaigns</p>
             </div>
             <div className="flex items-center gap-3">
-              <Button
-                variant="secondary"
-                onClick={() =>
-                  setSidebarSection(
-                    sidebarSection === "integrations" ? "dashboard" : "integrations"
-                  )
-                }
-              >
-                <MessageSquare size={15} />
-                {sidebarSection === "integrations" ? "Back to Emails" : "Slack Integration"}
-              </Button>
               <Button onClick={() => setComposeModalOpen(true)}>
                 <Plus size={16} />
                 Compose New Email
@@ -147,7 +136,9 @@ export default function Dashboard({
           </div>
 
           {sidebarSection === "integrations" ? (
-            <SlackConnect />
+            <div className="max-w-2xl">
+              <SlackConnect />
+            </div>
           ) : (
             <>
               {/* search bar */}
@@ -203,6 +194,11 @@ export default function Dashboard({
                 ) : (
                   <SentEmails />
                 )}
+              </div>
+
+              {/* ── Integration Section on Dashboard ────────────────── */}
+              <div className="pt-2">
+                <SlackConnect />
               </div>
             </>
           )}

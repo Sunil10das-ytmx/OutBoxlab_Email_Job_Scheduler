@@ -26,10 +26,8 @@ export default function App() {
             }}
           />
           <Routes>
-            {/* Public Login Route */}
             <Route path="/login" element={<Login />} />
 
-            {/* Protected Dashboard Route */}
             <Route
               path="/dashboard"
               element={
@@ -39,13 +37,11 @@ export default function App() {
               }
             />
 
-            {/* Default Route redirects to Dashboard */}
             <Route
               path="/"
               element={<Navigate to="/dashboard" replace />}
             />
 
-            {/* Catch-all redirect to Dashboard */}
             <Route
               path="*"
               element={<Navigate to="/dashboard" replace />}

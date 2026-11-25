@@ -1,14 +1,4 @@
-/**
- * EmailTable.tsx — UI states matching assignment design:
- * 1. Loading:
- *    - Scheduled: "Loading scheduled emails..."
- *    - Sent: "Loading sent emails..."
- * 2. Normal state — Data available:
- *    - Clean table with Email, Subject, Time, Status badge
- * 3. Normal state — No data:
- *    - Scheduled: CalendarClock icon + "No scheduled emails yet" + "Your scheduled emails will appear here."
- *    - Sent: Mail icon + "No sent emails yet" + "Your sent emails will appear here."
- */
+
 import {
   RefreshCw,
   AlertCircle,
@@ -20,10 +10,8 @@ import {
 } from "lucide-react";
 import type { ScheduledEmail } from "../../types/email";
 
-/* ── constants ─────────────────────────────────────────────────── */
 const PAGE_SIZE = 10;
 
-/* ── status badge ───────────────────────────────────────────────── */
 const STATUS_STYLES: Record<string, string> = {
   pending:   "bg-yellow-50 text-yellow-700 border-yellow-200",
   queued:    "bg-blue-50   text-blue-700   border-blue-200",
@@ -46,7 +34,6 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-/* ── props ──────────────────────────────────────────────────────── */
 export interface EmailTableProps {
   mode: "scheduled" | "sent";
   emails: ScheduledEmail[];
@@ -60,7 +47,6 @@ export interface EmailTableProps {
   cancellingId?: string | null;
 }
 
-/* ── component ──────────────────────────────────────────────────── */
 export default function EmailTable({
   mode,
   emails,
@@ -80,7 +66,6 @@ export default function EmailTable({
   const cols = ["Email", "Subject", timeHeader, "Status"];
   if (mode === "scheduled" && onCancel) cols.push("");
 
-  /* ── 1. LOADING STATE ────────────────────────────────────────── */
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center space-y-3">
@@ -98,7 +83,6 @@ export default function EmailTable({
     );
   }
 
-  /* ── 2. ERROR STATE ──────────────────────────────────────────── */
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center space-y-2">
@@ -124,7 +108,6 @@ export default function EmailTable({
     );
   }
 
-  /* ── 3. NORMAL STATE — NO DATA (Empty) ────────────────────────── */
   if (emails.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center space-y-2">
@@ -160,10 +143,8 @@ export default function EmailTable({
     );
   }
 
-  /* ── 4. NORMAL STATE — DATA AVAILABLE ─────────────────────────── */
   return (
     <div className="space-y-3">
-      {/* row count + refresh */}
       <div className="flex items-center justify-between text-sm text-gray-500">
         <span>
           <span className="font-semibold text-gray-800">{emails.length}</span>{" "}
@@ -180,7 +161,6 @@ export default function EmailTable({
         )}
       </div>
 
-      {/* table */}
       <div className="overflow-x-auto rounded-2xl border border-gray-200">
         <table className="w-full text-sm text-left">
           <thead>
@@ -217,17 +197,14 @@ export default function EmailTable({
                   key={email.id}
                   className="hover:bg-gray-50 transition-colors"
                 >
-                  {/* Email */}
                   <td className="px-4 py-3 text-gray-800 font-medium max-w-[200px] truncate">
                     {recipient}
                   </td>
 
-                  {/* Subject */}
                   <td className="px-4 py-3 text-gray-600 max-w-[220px] truncate">
                     {email.subject}
                   </td>
 
-                  {/* Time */}
                   <td className="px-4 py-3 text-gray-500 whitespace-nowrap">
                     {new Date(timeValue).toLocaleString("en-IN", {
                       day: "2-digit",
@@ -238,12 +215,10 @@ export default function EmailTable({
                     })}
                   </td>
 
-                  {/* Status */}
                   <td className="px-4 py-3">
                     <StatusBadge status={email.status} />
                   </td>
 
-                  {/* Cancel (scheduled only) */}
                   {mode === "scheduled" && onCancel && (
                     <td className="px-4 py-3 text-right">
                       {canCancel && (
@@ -269,7 +244,6 @@ export default function EmailTable({
         </table>
       </div>
 
-      {/* pagination */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between pt-1">
           <p className="text-xs text-gray-400">

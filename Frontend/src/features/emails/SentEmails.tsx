@@ -34,7 +34,6 @@ export default function SentEmails() {
   useEffect(() => {
     fetchEmails();
 
-    /* Auto-refresh list every 10 seconds while active tab is mounted */
     const interval = setInterval(() => {
       fetchEmails(true);
     }, 10000);
@@ -51,7 +50,6 @@ export default function SentEmails() {
       page={page}
       onPageChange={setPage}
       onRefresh={() => fetchEmails()}
-      /* Sent emails cannot be cancelled */
     />
   );
 }

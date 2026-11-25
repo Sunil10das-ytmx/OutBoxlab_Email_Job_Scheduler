@@ -9,6 +9,12 @@ export const emailQueue = new Queue<EmailJobData>("email-queue", {
   connection: redis,
 });
 
+/* Prevent BullMQ EventEmitter from throwing unhandled error if Redis is restarting or offline */
+emailQueue.on("error", (err) => {
+  if (process.env.NODE_ENV !== "production") {
+    // Silent or debug log in dev
+  }
+});
 
 export async function addScheduledEmailsBulk(
   emails: Array<{ id: string; scheduledAt: Date }>
@@ -35,5 +41,10 @@ export async function addScheduledEmailsBulk(
     },
   }));
 
-  return await emailQueue.addBulk(jobs);
+  try {
+    return await emailQueue.addBulk(jobs);
+  } catch (err: any) {
+    console.warn("[Queue] addScheduledEmailsBulk deferred:", err.message);
+    return [];
+  }
 }

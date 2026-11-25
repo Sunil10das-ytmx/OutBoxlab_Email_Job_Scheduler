@@ -30,7 +30,6 @@ export interface ScheduleEmailRequest {
   campaignName?: string;
 }
 
-/* ── Aliases for seamless component compatibility ────────────────── */
 export type ScheduledEmail = Email;
 export type ScheduleEmailPayload = ScheduleEmailRequest;
 

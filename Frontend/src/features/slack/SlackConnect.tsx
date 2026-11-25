@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import toast from "react-hot-toast";
-import { CheckCircle2, RefreshCw } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
 import { api, API_BASE } from "../../services/api";
 import type { SlackStatus } from "../../types/user";
 
@@ -55,24 +55,14 @@ export default function SlackConnect() {
     }
   };
 
-  /* ── 1. LOADING STATE (Checking Slack status...) ──────────────────── */
   if (loading) {
     return (
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-8 text-center space-y-2 w-full">
-        <div className="flex justify-center mb-2">
-          <RefreshCw size={26} className="animate-spin text-gray-600" />
-        </div>
-        <p className="text-base font-semibold text-gray-900">
-          Checking Slack status...
-        </p>
-        <p className="text-sm text-gray-500">
-          Backend API se status check ho raha hai
-        </p>
+      <div className="bg-gray-50 rounded-2xl border border-gray-200 p-4 text-center w-full">
+        <p className="text-sm text-gray-400 animate-pulse">Checking status...</p>
       </div>
     );
   }
 
-  /* ── 2. CONNECTED STATE ───────────────────────────────────────────── */
   if (status?.connected) {
     return (
       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 text-center space-y-3.5 w-full">
@@ -104,7 +94,6 @@ export default function SlackConnect() {
     );
   }
 
-  /* ── 3. NOT CONNECTED STATE ───────────────────────────────────────── */
   return (
     <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 text-center space-y-3.5 w-full">
       <div className="flex justify-center">

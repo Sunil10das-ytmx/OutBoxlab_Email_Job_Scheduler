@@ -33,7 +33,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.getItem("token")
   );
   const [loading, setLoading] = useState<boolean>(() => {
-    // Only show session checking if there is a token but no persisted user
     return !!localStorage.getItem("token") && !localStorage.getItem("user");
   });
 
@@ -51,8 +50,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.setItem("user", JSON.stringify(res.data.user));
       })
       .catch((err: any) => {
-        // ONLY log out if backend explicitly rejected credentials with 401
-        // Do NOT log out on 503 (database busy) or network error / timeout
         if (err.response?.status === 401) {
           localStorage.removeItem("token");
           localStorage.removeItem("user");

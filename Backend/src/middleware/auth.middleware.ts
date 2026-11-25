@@ -58,7 +58,6 @@ export async function authenticate(
         return;
       }
     } catch {
-      // Redis unavailable; continue token verification
     }
 
     const jwtSecret = process.env.JWT_SECRET || "default_jwt_secret";

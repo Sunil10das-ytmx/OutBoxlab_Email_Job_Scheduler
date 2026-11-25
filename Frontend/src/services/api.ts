@@ -5,7 +5,7 @@ export const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:5000";
 export const api = axios.create({
   baseURL: API_BASE,
   withCredentials: true,
-  timeout: 15000, // 15s timeout for serverless database latency
+  timeout: 15000, 
   headers: {
     "Content-Type": "application/json",
   },

@@ -19,7 +19,7 @@ export default function Header() {
           <Send size={18} />
         </div>
         <span className="text-lg font-bold text-slate-900 tracking-tight">
-          ReachInbox
+          MailBox
         </span>
       </div>
 

@@ -1,4 +1,9 @@
-
+/**
+ * EmailTable.tsx — Reusable table with exact 3 UI states:
+ * 1. Loading: "Loading scheduled emails..."
+ * 2. Empty: "No scheduled emails \n Your scheduled emails will appear here. \n [Compose New Email]"
+ * 3. Error: "Unable to load emails. \n Please try again. \n [Retry]"
+ */
 import {
   RefreshCw,
   AlertCircle,
@@ -9,8 +14,10 @@ import {
 } from "lucide-react";
 import type { ScheduledEmail } from "../../types/email";
 
+/* ── constants ─────────────────────────────────────────────────── */
 const PAGE_SIZE = 10;
 
+/* ── status badge ───────────────────────────────────────────────── */
 const STATUS_STYLES: Record<string, string> = {
   pending:   "bg-yellow-100 text-yellow-700 border-yellow-200",
   queued:    "bg-blue-100   text-blue-700   border-blue-200",
@@ -33,6 +40,7 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
+/* ── props ──────────────────────────────────────────────────────── */
 export interface EmailTableProps {
   mode: "scheduled" | "sent";
   emails: ScheduledEmail[];
@@ -41,10 +49,15 @@ export interface EmailTableProps {
   page: number;
   onPageChange: (p: number) => void;
   onRefresh?: () => void;
+  /** Action trigger to open Compose modal on empty state */
+  onCompose?: () => void;
+  /** called when cancel ❌ is clicked; only relevant in "scheduled" mode */
   onCancel?: (id: string) => void;
+  /** id of the email currently being cancelled (shows spinner) */
   cancellingId?: string | null;
 }
 
+/* ── component ──────────────────────────────────────────────────── */
 export default function EmailTable({
   mode,
   emails,
@@ -53,62 +66,89 @@ export default function EmailTable({
   page,
   onPageChange,
   onRefresh,
+  onCompose,
   onCancel,
   cancellingId,
 }: EmailTableProps) {
+  /* pagination */
   const totalPages = Math.max(1, Math.ceil(emails.length / PAGE_SIZE));
   const paged = emails.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
+  /* column headers */
   const timeHeader = mode === "scheduled" ? "Scheduled Time" : "Sent Time";
   const cols = ["Email", "Subject", timeHeader, "Status"];
-  if (mode === "scheduled" && onCancel) cols.push(""); 
+  if (mode === "scheduled" && onCancel) cols.push("");
 
+  /* ── 1. LOADING STATE ────────────────────────────────────────── */
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 text-gray-400">
-        <RefreshCw size={28} className="animate-spin mb-3" />
-        <p className="text-sm">
-          Loading {mode === "scheduled" ? "scheduled" : "sent"} emails…
+      <div className="flex flex-col items-center justify-center py-20 text-center space-y-3">
+        <RefreshCw size={28} className="animate-spin text-gray-700" />
+        <p className="text-sm font-medium text-gray-600">
+          Loading {mode === "scheduled" ? "scheduled" : "sent"} emails...
         </p>
       </div>
     );
   }
 
+  /* ── 2. ERROR STATE ──────────────────────────────────────────── */
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 text-red-400">
-        <AlertCircle size={32} className="mb-3" />
-        <p className="text-sm font-medium mb-4">{error}</p>
+      <div className="flex flex-col items-center justify-center py-16 text-center space-y-2">
+        <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center text-red-500 mb-1">
+          <AlertCircle size={24} />
+        </div>
+        <p className="text-base font-semibold text-gray-800">Unable to load emails.</p>
+        <p className="text-sm text-gray-500">Please try again.</p>
         {onRefresh && (
-          <button
-            onClick={onRefresh}
-            className="px-4 py-2 rounded-full border border-red-300 text-red-500 text-xs font-semibold hover:bg-red-50 transition"
-          >
-            Retry
-          </button>
+          <div className="pt-3">
+            <button
+              type="button"
+              onClick={onRefresh}
+              className="px-6 py-2 rounded-full bg-gray-900 hover:bg-gray-800 text-white text-xs font-semibold shadow-sm transition cursor-pointer"
+            >
+              Retry
+            </button>
+          </div>
         )}
       </div>
     );
   }
 
+  /* ── 3. EMPTY STATE ──────────────────────────────────────────── */
   if (emails.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 text-gray-400">
-        <Inbox size={40} className="mb-3 text-gray-300" />
-        <p className="text-sm font-medium text-gray-500">
-          {mode === "scheduled" ? "No scheduled emails" : "No sent emails yet"}
+      <div className="flex flex-col items-center justify-center py-16 text-center space-y-2">
+        <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 mb-1">
+          <Inbox size={24} />
+        </div>
+        <p className="text-base font-semibold text-gray-800">
+          {mode === "scheduled" ? "No scheduled emails" : "No sent emails"}
         </p>
-        <p className="text-xs text-gray-400 mt-1">
+        <p className="text-sm text-gray-500 max-w-sm">
           {mode === "scheduled"
-            ? "Compose a new campaign to get started."
-            : "Delivered and failed emails will appear here."}
+            ? "Your scheduled emails will appear here."
+            : "Your sent and delivered emails will appear here."}
         </p>
+        {mode === "scheduled" && onCompose && (
+          <div className="pt-3">
+            <button
+              type="button"
+              onClick={onCompose}
+              className="px-6 py-2.5 rounded-full bg-gray-900 hover:bg-gray-800 text-white text-xs font-semibold shadow-sm transition cursor-pointer"
+            >
+              Compose New Email
+            </button>
+          </div>
+        )}
       </div>
     );
   }
 
+  /* ── 4. TABLE VIEW ───────────────────────────────────────────── */
   return (
     <div className="space-y-3">
+      {/* row count + refresh */}
       <div className="flex items-center justify-between text-sm text-gray-500">
         <span>
           <span className="font-semibold text-gray-800">{emails.length}</span>{" "}
@@ -117,7 +157,7 @@ export default function EmailTable({
         {onRefresh && (
           <button
             onClick={onRefresh}
-            className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-800 border border-gray-200 rounded-full px-3 py-1.5 hover:bg-gray-50 transition"
+            className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-gray-800 border border-gray-200 rounded-full px-3 py-1.5 hover:bg-gray-50 transition cursor-pointer"
           >
             <RefreshCw size={12} />
             Refresh
@@ -125,7 +165,7 @@ export default function EmailTable({
         )}
       </div>
 
-      
+      {/* table */}
       <div className="overflow-x-auto rounded-2xl border border-gray-200">
         <table className="w-full text-sm text-left">
           <thead>
@@ -162,14 +202,17 @@ export default function EmailTable({
                   key={email.id}
                   className="hover:bg-gray-50 transition-colors"
                 >
+                  {/* Email */}
                   <td className="px-4 py-3 text-gray-800 font-medium max-w-[200px] truncate">
                     {recipient}
                   </td>
 
+                  {/* Subject */}
                   <td className="px-4 py-3 text-gray-600 max-w-[220px] truncate">
                     {email.subject}
                   </td>
 
+                  {/* Time */}
                   <td className="px-4 py-3 text-gray-500 whitespace-nowrap">
                     {new Date(timeValue).toLocaleString("en-IN", {
                       day: "2-digit",
@@ -180,10 +223,12 @@ export default function EmailTable({
                     })}
                   </td>
 
+                  {/* Status */}
                   <td className="px-4 py-3">
                     <StatusBadge status={email.status} />
                   </td>
 
+                  {/* Cancel (scheduled only) */}
                   {mode === "scheduled" && onCancel && (
                     <td className="px-4 py-3 text-right">
                       {canCancel && (
@@ -191,7 +236,7 @@ export default function EmailTable({
                           onClick={() => onCancel(email.id)}
                           disabled={cancellingId === email.id}
                           title="Cancel this email"
-                          className="p-1.5 rounded-full text-gray-400 hover:text-red-500 hover:bg-red-50 transition disabled:opacity-40"
+                          className="p-1.5 rounded-full text-gray-400 hover:text-red-500 hover:bg-red-50 transition disabled:opacity-40 cursor-pointer"
                         >
                           {cancellingId === email.id ? (
                             <RefreshCw size={13} className="animate-spin" />
@@ -209,6 +254,7 @@ export default function EmailTable({
         </table>
       </div>
 
+      {/* pagination */}
       {totalPages > 1 && (
         <div className="flex items-center justify-between pt-1">
           <p className="text-xs text-gray-400">
@@ -218,14 +264,14 @@ export default function EmailTable({
             <button
               onClick={() => onPageChange(Math.max(1, page - 1))}
               disabled={page === 1}
-              className="p-1.5 rounded-full border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-30 transition"
+              className="p-1.5 rounded-full border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-30 transition cursor-pointer"
             >
               <ChevronLeft size={15} />
             </button>
             <button
               onClick={() => onPageChange(Math.min(totalPages, page + 1))}
               disabled={page === totalPages}
-              className="p-1.5 rounded-full border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-30 transition"
+              className="p-1.5 rounded-full border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-30 transition cursor-pointer"
             >
               <ChevronRight size={15} />
             </button>

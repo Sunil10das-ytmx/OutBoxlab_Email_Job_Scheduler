@@ -4,7 +4,11 @@ import EmailTable from "./EmailTable";
 import { emailService } from "./email.service";
 import type { ScheduledEmail } from "../../types/email";
 
-export default function ScheduledEmails() {
+interface ScheduledEmailsProps {
+  onCompose?: () => void;
+}
+
+export default function ScheduledEmails({ onCompose }: ScheduledEmailsProps) {
   const [emails, setEmails] = useState<ScheduledEmail[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -24,7 +28,7 @@ export default function ScheduledEmails() {
     } catch (err: unknown) {
       const msg =
         (err as { response?: { data?: { error?: string } } })?.response?.data
-          ?.error ?? "Failed to load scheduled emails";
+          ?.error ?? "Unable to load emails.";
       setError(msg);
       if (!silent) toast.error(msg);
     } finally {
@@ -32,7 +36,16 @@ export default function ScheduledEmails() {
     }
   }, []);
 
-  useEffect(() => { fetchEmails(); }, [fetchEmails]);
+  useEffect(() => {
+    fetchEmails();
+
+    /* Auto-refresh list every 10 seconds while active tab is mounted */
+    const interval = setInterval(() => {
+      fetchEmails(true);
+    }, 10000);
+
+    return () => clearInterval(interval);
+  }, [fetchEmails]);
 
   const handleCancel = async (id: string) => {
     setCancellingId(id);
@@ -56,6 +69,7 @@ export default function ScheduledEmails() {
       page={page}
       onPageChange={setPage}
       onRefresh={() => fetchEmails()}
+      onCompose={onCompose}
       onCancel={handleCancel}
       cancellingId={cancellingId}
     />

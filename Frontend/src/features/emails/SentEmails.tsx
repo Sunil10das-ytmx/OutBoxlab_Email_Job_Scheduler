@@ -15,7 +15,6 @@ export default function SentEmails() {
     setError(null);
     try {
       const { data } = await emailService.getSent();
-      /* handle both { emails: [...] } and plain array */
       const list = Array.isArray(data)
         ? data
         : (data as unknown as { emails: ScheduledEmail[] }).emails ?? [];
@@ -24,7 +23,7 @@ export default function SentEmails() {
     } catch (err: unknown) {
       const msg =
         (err as { response?: { data?: { error?: string } } })?.response?.data
-          ?.error ?? "Failed to load sent emails";
+          ?.error ?? "Unable to load emails.";
       setError(msg);
       if (!silent) toast.error(msg);
     } finally {
@@ -32,7 +31,16 @@ export default function SentEmails() {
     }
   }, []);
 
-  useEffect(() => { fetchEmails(); }, [fetchEmails]);
+  useEffect(() => {
+    fetchEmails();
+
+    /* Auto-refresh list every 10 seconds while active tab is mounted */
+    const interval = setInterval(() => {
+      fetchEmails(true);
+    }, 10000);
+
+    return () => clearInterval(interval);
+  }, [fetchEmails]);
 
   return (
     <EmailTable
@@ -43,7 +51,7 @@ export default function SentEmails() {
       page={page}
       onPageChange={setPage}
       onRefresh={() => fetchEmails()}
-      /* no onCancel — sent emails cannot be cancelled */
+      /* Sent emails cannot be cancelled */
     />
   );
 }

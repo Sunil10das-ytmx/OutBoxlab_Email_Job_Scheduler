@@ -12,7 +12,6 @@ import SlackConnect from "../features/slack/SlackConnect";
 import { emailService } from "../features/emails/email.service";
 import type { ScheduledEmail } from "../types/email";
 
-/* ── inline search-results table (lightweight) ─────────────────── */
 function SearchResultsTable({ emails }: { emails: ScheduledEmail[] }) {
   const STATUS_STYLES: Record<string, string> = {
     pending:   "bg-yellow-100 text-yellow-700 border-yellow-200",
@@ -62,7 +61,6 @@ function SearchResultsTable({ emails }: { emails: ScheduledEmail[] }) {
   );
 }
 
-/* ── Dashboard ─────────────────────────────────────────────────── */
 export default function Dashboard({
   initialSection = "scheduled",
 }: {
@@ -86,7 +84,6 @@ export default function Dashboard({
   const [searchResults, setSearchResults] = useState<ScheduledEmail[] | null>(null);
   const [searching, setSearching] = useState(false);
 
-  /* compose success → switch to scheduled tab */
   const [composeKey, setComposeKey] = useState(0);
 
   const handleSidebarSelect = (section: SidebarSection) => {
@@ -121,7 +118,6 @@ export default function Dashboard({
 
         <main className="flex-1 p-6 max-w-5xl w-full mx-auto space-y-6">
 
-          {/* top bar */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <h1 className="text-2xl font-bold text-slate-900">Email Dashboard</h1>
@@ -141,7 +137,6 @@ export default function Dashboard({
             </div>
           ) : (
             <>
-              {/* search bar */}
               <div className="flex gap-2">
                 <input
                   type="text"
@@ -165,7 +160,6 @@ export default function Dashboard({
                 )}
               </div>
 
-              {/* tabs */}
               {!searchResults && (
                 <div className="flex items-center gap-6 border-b border-slate-200">
                   {(["scheduled", "sent"] as const).map((tab) => (
@@ -185,18 +179,19 @@ export default function Dashboard({
                 </div>
               )}
 
-              {/* content */}
               <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
                 {searchResults ? (
                   <SearchResultsTable emails={searchResults} />
                 ) : activeTab === "scheduled" ? (
-                  <ScheduledEmails key={composeKey} />
+                  <ScheduledEmails
+                    key={composeKey}
+                    onCompose={() => setComposeModalOpen(true)}
+                  />
                 ) : (
                   <SentEmails />
                 )}
               </div>
 
-              {/* ── Integration Section on Dashboard ────────────────── */}
               <div className="pt-2">
                 <SlackConnect />
               </div>
@@ -205,7 +200,6 @@ export default function Dashboard({
         </main>
       </div>
 
-      {/* Compose Modal */}
       <Modal
         open={composeModalOpen}
         title="Compose New Email"
@@ -216,7 +210,7 @@ export default function Dashboard({
             setComposeModalOpen(false);
             setActiveTab("scheduled");
             setSidebarSection("scheduled");
-            setComposeKey((k) => k + 1); // force ScheduledEmails re-fetch
+            setComposeKey((k) => k + 1); 
           }}
           onCancel={() => setComposeModalOpen(false)}
         />

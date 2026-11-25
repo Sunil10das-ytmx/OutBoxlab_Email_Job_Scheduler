@@ -23,10 +23,16 @@ export default function GoogleLogin() {
             toast.success(`Welcome, ${data.user.name}!`);
             navigate("/dashboard", { replace: true });
           } catch (err: unknown) {
-            const errObj = err as { response?: { data?: { error?: string } } };
-            toast.error(
-              errObj.response?.data?.error ?? "Google authentication failed"
-            );
+            const errObj = err as {
+              response?: { data?: { error?: string } };
+              message?: string;
+            };
+            const errorMsg =
+              errObj.response?.data?.error ||
+              (errObj.response
+                ? "Google authentication failed"
+                : "Cannot connect to Backend (ensure Backend is running on port 5000)");
+            toast.error(errorMsg);
           }
         }}
         onError={() => toast.error("Google login failed")}

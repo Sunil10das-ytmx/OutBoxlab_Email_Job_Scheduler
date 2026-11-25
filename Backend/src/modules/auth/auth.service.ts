@@ -2,8 +2,6 @@ import { OAuth2Client } from "google-auth-library";
 import jwt from "jsonwebtoken";
 import { prisma } from "../../config/database.js";
 
-const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
-
 export interface GoogleUserPayload {
   googleId: string;
   email: string;
@@ -19,7 +17,8 @@ export async function verifyGoogleToken(idToken: string): Promise<GoogleUserPayl
     );
   }
 
-  const ticket = await googleClient.verifyIdToken({
+  const client = new OAuth2Client(clientId);
+  const ticket = await client.verifyIdToken({
     idToken,
     audience: clientId,
   });

@@ -25,24 +25,28 @@ declare global {
 }
 
 
+function extractTokenFromCookie(cookieHeader?: string): string | undefined {
+  if (!cookieHeader) return undefined;
+  const match = cookieHeader
+    .split(";")
+    .map((c) => c.trim())
+    .find((c) => c.startsWith("token="));
+  return match ? decodeURIComponent(match.slice("token=".length)) : undefined;
+}
+
 export async function authenticate(
   req: Request,
   res: Response,
   next: NextFunction
 ): Promise<void> {
   const authHeader = req.headers.authorization;
-
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    res.status(401).json({
-      error: "Authentication token required. Use format: Authorization: Bearer <token>",
-    });
-    return;
-  }
-
-  const token = authHeader.split(" ")[1];
+  const bearerToken = authHeader?.startsWith("Bearer ") ? authHeader.split(" ")[1] : undefined;
+  const token = bearerToken || extractTokenFromCookie(req.headers.cookie);
 
   if (!token) {
-    res.status(401).json({ error: "Bearer token missing" });
+    res.status(401).json({
+      error: "Authentication required",
+    });
     return;
   }
 

@@ -4,6 +4,15 @@ import { loginWithGoogle } from "./auth.service.js";
 import { redis } from "../../config/redis.js";
 
 
+function extractTokenFromCookie(cookieHeader?: string): string | undefined {
+  if (!cookieHeader) return undefined;
+  const match = cookieHeader
+    .split(";")
+    .map((c) => c.trim())
+    .find((c) => c.startsWith("token="));
+  return match ? decodeURIComponent(match.slice("token=".length)) : undefined;
+}
+
 export async function googleLogin(req: Request, res: Response): Promise<void> {
   try {
     const idToken =
@@ -17,6 +26,13 @@ export async function googleLogin(req: Request, res: Response): Promise<void> {
     }
 
     const { user, token } = await loginWithGoogle(idToken);
+
+    res.cookie("token", token, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
 
     res.status(200).json({
       success: true,
@@ -41,7 +57,8 @@ export async function getCurrentUser(req: Request, res: Response): Promise<void>
 
 export async function logout(req: Request, res: Response): Promise<void> {
   const authHeader = req.headers.authorization;
-  const token = authHeader?.startsWith("Bearer ") ? authHeader.split(" ")[1] : undefined;
+  const bearerToken = authHeader?.startsWith("Bearer ") ? authHeader.split(" ")[1] : undefined;
+  const token = bearerToken || extractTokenFromCookie(req.headers.cookie);
 
   if (token) {
     try {
@@ -53,6 +70,12 @@ export async function logout(req: Request, res: Response): Promise<void> {
     } catch {
     }
   }
+
+  res.clearCookie("token", {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+  });
 
   res.status(200).json({
     success: true,

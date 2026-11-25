@@ -78,7 +78,7 @@ export const worker = new Worker(
         },
         data: {
           status: "sending",
-          sendingStartedAt: new Date(),
+          createdAt: new Date(),
           attempts: { increment: 1 },
         },
       });

@@ -188,8 +188,12 @@ export function startEmailIndexOutboxDispatcher(intervalMs = 5_000): void {
   if (dispatcherInterval) return;
 
   const dispatch = () => {
-    dispatchPendingEmailIndexEvents().catch((error: unknown) => {
-      console.error("[EmailIndex] Outbox dispatcher failed:", error);
+    dispatchPendingEmailIndexEvents().catch((error: any) => {
+      if (error?.code === "P1001" || error?.message?.includes("Can't reach database server")) {
+        console.warn("[EmailIndex] Database temporarily unreachable; will retry on next tick.");
+      } else {
+        console.error("[EmailIndex] Outbox dispatcher failed:", error);
+      }
     });
   };
 

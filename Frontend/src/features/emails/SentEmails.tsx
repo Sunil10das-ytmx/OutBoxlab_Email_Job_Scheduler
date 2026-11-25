@@ -1,5 +1,4 @@
 import { useEffect, useState, useCallback } from "react";
-import toast from "react-hot-toast";
 import EmailTable from "./EmailTable";
 import { emailService } from "./email.service";
 import type { ScheduledEmail } from "../../types/email";
@@ -25,7 +24,6 @@ export default function SentEmails() {
         (err as { response?: { data?: { error?: string } } })?.response?.data
           ?.error ?? "Unable to load emails.";
       setError(msg);
-      if (!silent) toast.error(msg);
     } finally {
       setLoading(false);
     }

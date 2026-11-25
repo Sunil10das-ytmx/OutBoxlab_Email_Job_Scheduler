@@ -30,7 +30,6 @@ export default function ScheduledEmails({ onCompose }: ScheduledEmailsProps) {
         (err as { response?: { data?: { error?: string } } })?.response?.data
           ?.error ?? "Unable to load emails.";
       setError(msg);
-      if (!silent) toast.error(msg);
     } finally {
       setLoading(false);
     }

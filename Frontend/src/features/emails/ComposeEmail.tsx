@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import toast from "react-hot-toast";
-import { FileUp } from "lucide-react";
+import { FileUp, ChevronDown, Plus } from "lucide-react";
 import { emailService, senderService } from "./email.service";
+import AddSenderModal from "./AddSenderModal";
 import type { CsvParseResult, Sender } from "../../types/email";
 
 interface ComposeEmailProps {
@@ -14,6 +15,10 @@ export default function ComposeEmail({ onSuccess, onCancel }: ComposeEmailProps)
 
   const [senders, setSenders] = useState<Sender[]>([]);
   const [senderId, setSenderId] = useState("");
+  const [loadingSenders, setLoadingSenders] = useState(true);
+  const [sendersError, setSendersError] = useState(false);
+  const [showAddSenderModal, setShowAddSenderModal] = useState(false);
+
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [startTime, setStartTime] = useState(() => {
@@ -28,15 +33,30 @@ export default function ComposeEmail({ onSuccess, onCancel }: ComposeEmailProps)
   const [parsing, setParsing] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  useEffect(() => {
-    senderService
-      .list()
-      .then((res) => {
-        setSenders(res.data);
-        if (res.data.length > 0) setSenderId(res.data[0]!.id);
-      })
-      .catch(() => toast.error("Failed to load senders"));
+  const loadSenders = useCallback(async () => {
+    setLoadingSenders(true);
+    setSendersError(false);
+    try {
+      const res = await senderService.list();
+      setSenders(res.data);
+      if (res.data.length > 0) {
+        setSenderId((prev) => prev || res.data[0]!.id);
+      }
+    } catch {
+      setSendersError(true);
+    } finally {
+      setLoadingSenders(false);
+    }
   }, []);
+
+  useEffect(() => {
+    loadSenders();
+  }, [loadSenders]);
+
+  const handleSenderAdded = (newSender: Sender) => {
+    setSenders((prev) => [newSender, ...prev]);
+    setSenderId(newSender.id);
+  };
 
   const handleCsvChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -97,26 +117,75 @@ export default function ComposeEmail({ onSuccess, onCancel }: ComposeEmailProps)
   return (
     <form onSubmit={handleSubmit} className="space-y-4 text-gray-800">
 
+      {/* Sender Field with 4 Situational UI States */}
       <div>
-        <label className="block text-sm font-semibold mb-1.5">Sender</label>
-        {senders.length === 0 ? (
-          <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
-            No senders found. Add one via POST&nbsp;/api/senders first.
-          </p>
+        <div className="flex items-center justify-between mb-1.5">
+          <label className="block text-sm font-semibold text-gray-900">Sender</label>
+          {senders.length > 0 && !loadingSenders && !sendersError && (
+            <button
+              type="button"
+              onClick={() => setShowAddSenderModal(true)}
+              className="text-xs font-semibold text-gray-900 hover:text-emerald-700 flex items-center gap-1 transition cursor-pointer"
+            >
+              <Plus size={13} />
+              Add Sender
+            </button>
+          )}
+        </div>
+
+        {loadingSenders ? (
+          <div className="border border-gray-200 rounded-2xl p-4 bg-gray-50 text-center flex items-center justify-center gap-2 text-sm text-gray-500 font-medium">
+            <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-800 rounded-full animate-spin" />
+            Loading senders...
+          </div>
+        ) : sendersError ? (
+          <div className="border border-red-200 rounded-2xl p-3.5 bg-red-50 flex items-center justify-between">
+            <span className="text-xs font-medium text-red-700">Unable to load senders.</span>
+            <button
+              type="button"
+              onClick={loadSenders}
+              className="px-3 py-1 rounded-full bg-red-600 hover:bg-red-700 text-white text-xs font-semibold transition cursor-pointer"
+            >
+              Retry
+            </button>
+          </div>
+        ) : senders.length === 0 ? (
+          <div className="border border-gray-200 rounded-2xl p-4 bg-gray-50 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold text-gray-800">No sender accounts added yet</p>
+              <p className="text-xs text-gray-500 mt-0.5">Add an email sender account to start sending campaigns.</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowAddSenderModal(true)}
+              className="px-4 py-2 rounded-full bg-gray-900 hover:bg-gray-800 text-white text-xs font-semibold shadow-sm transition whitespace-nowrap cursor-pointer shrink-0"
+            >
+              Add Sender
+            </button>
+          </div>
         ) : (
-          <select
-            value={senderId}
-            onChange={(e) => setSenderId(e.target.value)}
-            className={inputCls + " cursor-pointer appearance-none"}
-            required
-          >
-            {senders.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.senderName} &lt;{s.senderEmail}&gt;
-                {s.useEthereal ? " [Ethereal]" : ""}
-              </option>
-            ))}
-          </select>
+          <div className="space-y-1.5">
+            <div className="relative border border-gray-200 rounded-2xl bg-white p-3 shadow-sm hover:border-gray-300 transition">
+              <select
+                value={senderId}
+                onChange={(e) => setSenderId(e.target.value)}
+                className="w-full text-sm font-medium text-gray-900 bg-transparent focus:outline-none cursor-pointer appearance-none pr-8"
+                required
+              >
+                {senders.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.senderEmail} ({s.senderName})
+                  </option>
+                ))}
+              </select>
+              <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-gray-500">
+                <ChevronDown size={17} />
+              </div>
+              <p className="text-xs text-gray-400 mt-1">
+                Select the email account you want to send from.
+              </p>
+            </div>
+          </div>
         )}
       </div>
 
@@ -240,12 +309,18 @@ export default function ComposeEmail({ onSuccess, onCancel }: ComposeEmailProps)
           <button
             type="button"
             onClick={onCancel}
-            className="w-full border border-gray-300 hover:bg-gray-50 text-gray-600 text-sm font-medium py-2.5 rounded-full transition"
+            className="w-full border border-gray-300 hover:bg-gray-50 text-gray-600 text-sm font-medium py-2.5 rounded-full transition cursor-pointer"
           >
             Cancel
           </button>
         )}
       </div>
+
+      <AddSenderModal
+        open={showAddSenderModal}
+        onClose={() => setShowAddSenderModal(false)}
+        onSenderAdded={handleSenderAdded}
+      />
     </form>
   );
 }

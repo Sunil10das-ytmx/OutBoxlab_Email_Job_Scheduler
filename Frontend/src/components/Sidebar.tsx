@@ -21,9 +21,6 @@ const NAV_ITEMS: Array<{
 export default function Sidebar({ activeSection, onSelect }: SidebarProps) {
   return (
     <aside className="w-60 bg-white border-r border-slate-200 min-h-[calc(100vh-65px)] p-4 hidden md:flex flex-col gap-2">
-      <p className="px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-1">
-        Navigation
-      </p>
       <nav className="flex flex-col gap-1">
         {NAV_ITEMS.map((item) => {
           const active = activeSection === item.id;

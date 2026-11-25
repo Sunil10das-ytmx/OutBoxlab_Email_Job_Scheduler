@@ -1,13 +1,19 @@
 /**
- * EmailTable.tsx — Reusable table with exact 3 UI states:
- * 1. Loading: "Loading scheduled emails..."
- * 2. Empty: "No scheduled emails \n Your scheduled emails will appear here. \n [Compose New Email]"
- * 3. Error: "Unable to load emails. \n Please try again. \n [Retry]"
+ * EmailTable.tsx — UI states matching assignment design:
+ * 1. Loading:
+ *    - Scheduled: "Loading scheduled emails..."
+ *    - Sent: "Loading sent emails..."
+ * 2. Normal state — Data available:
+ *    - Clean table with Email, Subject, Time, Status badge
+ * 3. Normal state — No data:
+ *    - Scheduled: CalendarClock icon + "No scheduled emails yet" + "Your scheduled emails will appear here."
+ *    - Sent: Mail icon + "No sent emails yet" + "Your sent emails will appear here."
  */
 import {
   RefreshCw,
   AlertCircle,
-  Inbox,
+  CalendarClock,
+  Mail,
   ChevronLeft,
   ChevronRight,
   X,
@@ -19,19 +25,19 @@ const PAGE_SIZE = 10;
 
 /* ── status badge ───────────────────────────────────────────────── */
 const STATUS_STYLES: Record<string, string> = {
-  pending:   "bg-yellow-100 text-yellow-700 border-yellow-200",
-  queued:    "bg-blue-100   text-blue-700   border-blue-200",
-  sending:   "bg-purple-100 text-purple-700 border-purple-200",
-  sent:      "bg-green-100  text-green-700  border-green-200",
-  failed:    "bg-red-100    text-red-700    border-red-200",
-  cancelled: "bg-gray-100   text-gray-500   border-gray-200",
-  unknown:   "bg-gray-100   text-gray-500   border-gray-200",
+  pending:   "bg-yellow-50 text-yellow-700 border-yellow-200",
+  queued:    "bg-blue-50   text-blue-700   border-blue-200",
+  sending:   "bg-purple-50 text-purple-700 border-purple-200",
+  sent:      "bg-emerald-50 text-emerald-700 border-emerald-200",
+  failed:    "bg-red-50    text-red-700    border-red-200",
+  cancelled: "bg-gray-100  text-gray-500   border-gray-200",
+  unknown:   "bg-gray-100  text-gray-500   border-gray-200",
 };
 
 function StatusBadge({ status }: { status: string }) {
   return (
     <span
-      className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold border capitalize ${
+      className={`inline-block px-3 py-0.5 rounded-full text-xs font-medium border capitalize ${
         STATUS_STYLES[status] ?? STATUS_STYLES["unknown"]
       }`}
     >
@@ -49,11 +55,8 @@ export interface EmailTableProps {
   page: number;
   onPageChange: (p: number) => void;
   onRefresh?: () => void;
-  /** Action trigger to open Compose modal on empty state */
   onCompose?: () => void;
-  /** called when cancel ❌ is clicked; only relevant in "scheduled" mode */
   onCancel?: (id: string) => void;
-  /** id of the email currently being cancelled (shows spinner) */
   cancellingId?: string | null;
 }
 
@@ -70,11 +73,9 @@ export default function EmailTable({
   onCancel,
   cancellingId,
 }: EmailTableProps) {
-  /* pagination */
   const totalPages = Math.max(1, Math.ceil(emails.length / PAGE_SIZE));
   const paged = emails.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  /* column headers */
   const timeHeader = mode === "scheduled" ? "Scheduled Time" : "Sent Time";
   const cols = ["Email", "Subject", timeHeader, "Status"];
   if (mode === "scheduled" && onCancel) cols.push("");
@@ -83,9 +84,15 @@ export default function EmailTable({
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center space-y-3">
-        <RefreshCw size={28} className="animate-spin text-gray-700" />
-        <p className="text-sm font-medium text-gray-600">
-          Loading {mode === "scheduled" ? "scheduled" : "sent"} emails...
+        {mode === "scheduled" ? (
+          <div className="w-7 h-7 border-2 border-gray-300 border-t-gray-800 rounded-full animate-spin" />
+        ) : (
+          <RefreshCw size={26} className="animate-spin text-gray-600" />
+        )}
+        <p className="text-sm text-gray-700 font-medium">
+          {mode === "scheduled"
+            ? "Loading scheduled emails..."
+            : "Loading sent emails..."}
         </p>
       </div>
     );
@@ -98,7 +105,9 @@ export default function EmailTable({
         <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center text-red-500 mb-1">
           <AlertCircle size={24} />
         </div>
-        <p className="text-base font-semibold text-gray-800">Unable to load emails.</p>
+        <p className="text-base font-semibold text-gray-800">
+          Unable to load emails.
+        </p>
         <p className="text-sm text-gray-500">Please try again.</p>
         {onRefresh && (
           <div className="pt-3">
@@ -115,20 +124,26 @@ export default function EmailTable({
     );
   }
 
-  /* ── 3. EMPTY STATE ──────────────────────────────────────────── */
+  /* ── 3. NORMAL STATE — NO DATA (Empty) ────────────────────────── */
   if (emails.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center space-y-2">
-        <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 mb-1">
-          <Inbox size={24} />
+        <div className="w-12 h-12 rounded-full bg-gray-50 flex items-center justify-center text-gray-600 mb-1 border border-gray-100">
+          {mode === "scheduled" ? (
+            <CalendarClock size={26} className="text-gray-600" />
+          ) : (
+            <Mail size={26} className="text-gray-600" />
+          )}
         </div>
-        <p className="text-base font-semibold text-gray-800">
-          {mode === "scheduled" ? "No scheduled emails" : "No sent emails"}
+        <p className="text-base font-semibold text-gray-900">
+          {mode === "scheduled"
+            ? "No scheduled emails yet"
+            : "No sent emails yet"}
         </p>
         <p className="text-sm text-gray-500 max-w-sm">
           {mode === "scheduled"
             ? "Your scheduled emails will appear here."
-            : "Your sent and delivered emails will appear here."}
+            : "Your sent emails will appear here."}
         </p>
         {mode === "scheduled" && onCompose && (
           <div className="pt-3">
@@ -145,7 +160,7 @@ export default function EmailTable({
     );
   }
 
-  /* ── 4. TABLE VIEW ───────────────────────────────────────────── */
+  /* ── 4. NORMAL STATE — DATA AVAILABLE ─────────────────────────── */
   return (
     <div className="space-y-3">
       {/* row count + refresh */}

@@ -1,9 +1,9 @@
 export interface User {
   id: string;
-  googleId?: string;
-  email: string;
   name: string;
-  avatar?: string | null;
+  email: string;
+  avatar: string;
+  googleId?: string;
   picture?: string;
 }
 

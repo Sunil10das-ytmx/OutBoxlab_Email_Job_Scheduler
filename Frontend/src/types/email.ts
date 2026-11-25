@@ -7,6 +7,33 @@ export type EmailStatus =
   | "unknown"
   | "cancelled";
 
+export interface Email {
+  id: string;
+  recipientEmail: string;
+  subject: string;
+  scheduledAt: string;
+  sentAt?: string | null;
+  status: EmailStatus;
+  recipient?: string;
+  previewUrl?: string;
+  campaign?: { id: string; name: string };
+}
+
+export interface ScheduleEmailRequest {
+  senderId: string;
+  subject: string;
+  body: string;
+  recipients: string[];
+  startTime: string;
+  delayBetweenEmails: number;
+  hourlyLimit: number;
+  campaignName?: string;
+}
+
+/* ── Aliases for seamless component compatibility ────────────────── */
+export type ScheduledEmail = Email;
+export type ScheduleEmailPayload = ScheduleEmailRequest;
+
 export interface Sender {
   id: string;
   senderName: string;
@@ -15,18 +42,6 @@ export interface Sender {
   smtpPort?: number;
   isActive?: boolean;
   useEthereal?: boolean;
-}
-
-export interface ScheduledEmail {
-  id: string;
-  recipientEmail: string;   // backend field name
-  recipient?: string;       // alias fallback
-  subject: string;
-  status: EmailStatus;
-  scheduledAt: string;
-  sentAt?: string;
-  previewUrl?: string;
-  campaign?: { id: string; name: string };
 }
 
 export interface Campaign {
@@ -49,15 +64,4 @@ export interface CsvParseResult {
   validEmails: number;
   invalidEmails: number;
   recipients: string[];
-}
-
-export interface ScheduleEmailPayload {
-  senderId: string;
-  subject: string;
-  body: string;
-  recipients: string[];
-  startTime: string;
-  delayBetweenEmails: number;
-  hourlyLimit: number;
-  campaignName?: string;
 }

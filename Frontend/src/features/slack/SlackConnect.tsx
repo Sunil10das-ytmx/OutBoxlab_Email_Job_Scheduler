@@ -16,7 +16,6 @@ export default function SlackConnect() {
       );
       setStatus(response.data);
     } catch {
-      // If error or unauthenticated, default to not connected
       setStatus({ connected: false });
     } finally {
       setLoading(false);
@@ -26,7 +25,6 @@ export default function SlackConnect() {
   useEffect(() => {
     fetchStatus();
 
-    // Check query params after OAuth redirect from backend
     const params = new URLSearchParams(window.location.search);
     if (params.get("slack") === "connected") {
       toast.success("Slack connected successfully!");
@@ -58,10 +56,8 @@ export default function SlackConnect() {
 
   return (
     <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 w-full">
-      {/* ── Header: Slack Icon + Title + Badge ───────────────────────── */}
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2.5">
-          {/* Slack 4-color icon */}
           <svg
             className="w-5 h-5 shrink-0"
             viewBox="0 0 122.8 122.8"
@@ -89,25 +85,18 @@ export default function SlackConnect() {
           </h3>
         </div>
 
-        {/* Status pill badge */}
-        {status?.connected ? (
+        {status?.connected && (
           <span className="px-3 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-300">
             Connected
-          </span>
-        ) : (
-          <span className="px-3 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
-            Example
           </span>
         )}
       </div>
 
-      {/* ── Subtitle / Description ───────────────────────────────────── */}
       <p className="text-sm text-gray-500 mb-5 leading-relaxed">
         Connect Slack to receive notifications when an email sender reaches the
         hourly sending limit.
       </p>
 
-      {/* ── Action Button / State ────────────────────────────────────── */}
       {loading ? (
         <div className="w-full bg-gray-100 text-gray-400 text-sm font-semibold py-3 rounded-full text-center animate-pulse">
           Checking status…
